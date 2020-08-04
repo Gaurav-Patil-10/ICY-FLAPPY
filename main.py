@@ -6,8 +6,8 @@ from pygame.locals  import * # basic pygame imports
 # Global Variables for the game
 
 FPS = 32   # frames per second for rendering
-SCREEN_WIDTH = 350   
-SCREEN_HEIGHT = 600  
+SCREEN_WIDTH = 500 
+SCREEN_HEIGHT = 650 
 SCREEN = pygame.display.set_mode((SCREEN_WIDTH , SCREEN_HEIGHT))
 GROUNDY = SCREEN_HEIGHT
 GAME_SPRITES = {}
@@ -18,6 +18,73 @@ OBSTACLES = 'Sprites/obstacles.png'
 
 
 # Defining the Functions for the game 
+
+def welcome_screen():
+    """ 
+    Shows welcome images on the screen
+    """
+
+    playerX = int(SCREEN_WIDTH / 5)
+    playerY = int((SCREEN_HEIGHT - GAME_SPRITES['player'].get_height())/2)
+    messageX = int((SCREEN_HEIGHT - GAME_SPRITES['message'].get_width())/2)
+    messageY = int(SCREEN_HEIGHT  * 0.13)
+    baseX = 0
+    baseY = int((SCREEN_HEIGHT - GAME_SPRITES['player'].get_height() - 20))
+    while True:
+
+        for event in pygame.event.get():
+            # if user clicks on X button game will end there
+            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+
+                pygame.quit()
+                sys.exit()
+
+            # if user presses Space or Up key Start the game 
+
+            elif event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
+                return 
+
+            else:
+                # showing the images on the screen
+
+                SCREEN.blit(GAME_SPRITES['background'] , (0 ,0 ))
+                SCREEN.blit(GAME_SPRITES['message'] , (0,0 ))
+                pygame.display.update()
+                FPS_CLOCK.tick(FPS)
+                
+def main_game () :
+
+    """
+    The main Game Function
+    """
+    score = 0
+    playerX = int(SCREEN_WIDTH / 5)
+    playerY = int(SCREEN_HEIGHT / 2)
+    baseX = 0
+    baseY = int((SCREEN_HEIGHT - GAME_SPRITES['player'].get_height() - 20))
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+
+                    pygame.quit()
+                    sys.exit()
+
+                # if user presses Space or Up key Start the game 
+
+            elif event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
+                return 
+
+            else:
+                # showing the images on the screen
+                SCREEN.blit(GAME_SPRITES['background'] , (0 ,0 ))
+                SCREEN.blit(GAME_SPRITES['player'] , (playerX , playerY ))
+                SCREEN.blit(GAME_SPRITES['base'] , (baseX, baseY ))
+                pygame.display.update()
+                FPS_CLOCK.tick(FPS)
+
+                
+
 
 
 
