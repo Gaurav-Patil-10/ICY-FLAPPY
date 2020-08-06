@@ -1,147 +1,220 @@
-import pygame # importing pygame module
-import random # importing random for generating random numbers
-import sys    # for using sys.exit() for exiting the game when X is pressed
-from pygame.locals  import * # basic pygame imports
+import random # For generating random numbers
+import sys # We will use sys.exit to exit the program
+import pygame
+from pygame.locals import * # Basic pygame imports
 
 # Global Variables for the game
-
-FPS = 32   # frames per second for rendering
-SCREEN_WIDTH = 500 
-SCREEN_HEIGHT = 650 
-SCREEN = pygame.display.set_mode((SCREEN_WIDTH , SCREEN_HEIGHT))
-GROUNDY = SCREEN_HEIGHT
+FPS = 32
+SCREENWIDTH = 300
+SCREENHEIGHT = 520
+SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+GROUNDY = SCREENHEIGHT * 0.8
 GAME_SPRITES = {}
 GAME_SOUNDS = {}
-PLAYER = "Sprites/bird.png"
-BACKGROUND = "Sprites/background.png"
-OBSTACLES = 'Sprites/obstacles.png'
+PLAYER = 'Sprites/bird.png'
+BACKGROUND = 'Sprites/background.png'
+PIPE = 'Sprites/obstacles.png'
 
-
-# Defining the Functions for the game 
-
-def welcome_screen():
-    """ 
+def welcomeScreen():
+    """
     Shows welcome images on the screen
     """
 
-    playerX = int(SCREEN_WIDTH / 5)
-    playerY = int((SCREEN_HEIGHT - GAME_SPRITES['player'].get_height())/2)
-    messageX = int((SCREEN_HEIGHT - GAME_SPRITES['message'].get_width())/2)
-    messageY = int(SCREEN_HEIGHT  * 0.13)
-    baseX = 0
-    baseY = int((SCREEN_HEIGHT - GAME_SPRITES['player'].get_height() - 20))
+    playerx = int(SCREENWIDTH/5)
+    playery = int((SCREENHEIGHT - GAME_SPRITES['player'].get_height())/2)
+    messagex = int((SCREENWIDTH - GAME_SPRITES['message'].get_width())/2)
+    messagey = int(SCREENHEIGHT*0.13)
+    basex = 0
     while True:
-
         for event in pygame.event.get():
-            # if user clicks on X button game will end there
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-
+            # if user clicks on cross button, close the game
+            if event.type == QUIT or (event.type==KEYDOWN and event.key == K_ESCAPE):
                 pygame.quit()
                 sys.exit()
 
-            # if user presses Space or Up key Start the game 
-
-            elif event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-                return 
-
+            # If the user presses space or up key, start the game for them
+            elif event.type==KEYDOWN and (event.key==K_SPACE or event.key == K_UP):
+                return
             else:
-                # showing the images on the screen
-
-                SCREEN.blit(GAME_SPRITES['background'] , (0 ,0 ))
-                SCREEN.blit(GAME_SPRITES['message'] , (0,0 ))
+                SCREEN.blit(GAME_SPRITES['background'], (0, 0))    
+                SCREEN.blit(GAME_SPRITES['message'], (0,0 ))        
                 pygame.display.update()
-                FPS_CLOCK.tick(FPS)
-                
-def main_game () :
+                FPSCLOCK.tick(FPS)
 
-    """
-    The main Game Function
-    """
+def mainGame():
     score = 0
-    playerX = int(SCREEN_WIDTH / 5)
-    playerY = int(SCREEN_HEIGHT / 2)
-    baseX = 0
-    baseY = int((SCREEN_HEIGHT - GAME_SPRITES['player'].get_height() - 20))
+    playerx = int(SCREENWIDTH/5)
+    playery = int(SCREENWIDTH/2)
+    basex = 0
+
+    # Create 2 pipes for blitting on the screen
+    newPipe1 = getRandomPipe()
+    newPipe2 = getRandomPipe()
+
+    # my List of upper pipes
+    upperPipes = [
+        {'x': SCREENWIDTH+200, 'y':newPipe1[0]['y']},
+        {'x': SCREENWIDTH+200+(SCREENWIDTH/2), 'y':newPipe2[0]['y']},
+    ]
+    # my List of lower pipes
+    lowerPipes = [
+        {'x': SCREENWIDTH+200, 'y':newPipe1[1]['y']},
+        {'x': SCREENWIDTH+200+(SCREENWIDTH/2), 'y':newPipe2[1]['y']},
+    ]
+
+    pipeVelX = -4
+
+    playerVelY = -9
+    playerMaxVelY = 10
+    playerMinVelY = -8
+    playerAccY = 1
+
+    playerFlapAccv = -8 # velocity while flapping
+    playerFlapped = False # It is true only when the bird is flapping
+
 
     while True:
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-
-                    pygame.quit()
-                    sys.exit()
-
-                # if user presses Space or Up key Start the game 
-
-            elif event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
-                return 
-
-            else:
-                # showing the images on the screen
-                SCREEN.blit(GAME_SPRITES['background'] , (0 ,0 ))
-                SCREEN.blit(GAME_SPRITES['player'] , (playerX , playerY ))
-                SCREEN.blit(GAME_SPRITES['base'] , (baseX, baseY ))
-                pygame.display.update()
-                FPS_CLOCK.tick(FPS)
-
-                
+                pygame.quit()
+                sys.exit()
+            if event.type == KEYDOWN and (event.key == K_SPACE or event.key == K_UP):
+                if playery > 0:
+                    playerVelY = playerFlapAccv
+                    playerFlapped = True
+                    GAME_SOUNDS['wing'].play()
 
 
+        crashTest = isCollide(playerx, playery, upperPipes, lowerPipes) # This function will return true if the player is crashed
+        if crashTest:
+            return     
+
+        #check for score
+        playerMidPos = playerx + GAME_SPRITES['player'].get_width()/2
+        for pipe in upperPipes:
+            pipeMidPos = pipe['x'] + GAME_SPRITES['obstacles'][0].get_width()/2
+            if pipeMidPos<= playerMidPos < pipeMidPos +4:
+                score +=1
+                print(f"Your score is {score}") 
+                GAME_SOUNDS['point'].play()
+
+
+        if playerVelY <playerMaxVelY and not playerFlapped:
+            playerVelY += playerAccY
+
+        if playerFlapped:
+            playerFlapped = False            
+        playerHeight = GAME_SPRITES['player'].get_height()
+        playery = playery + min(playerVelY, GROUNDY - playery - playerHeight)
+
+        # move pipes to the left
+        for upperPipe , lowerPipe in zip(upperPipes, lowerPipes):
+            upperPipe['x'] += pipeVelX
+            lowerPipe['x'] += pipeVelX
+
+        # Add a new pipe when the first is about to cross the leftmost part of the screen
+        if 0<upperPipes[0]['x']<5:
+            newpipe = getRandomPipe()
+            upperPipes.append(newpipe[0])
+            lowerPipes.append(newpipe[1])
+
+        # if the pipe is out of the screen, remove it
+        if upperPipes[0]['x'] < -GAME_SPRITES['obstacles'][0].get_width():
+            upperPipes.pop(0)
+            lowerPipes.pop(0)
+        
+        # Lets blit our sprites now
+        SCREEN.blit(GAME_SPRITES['background'], (0, 0))
+        for upperPipe, lowerPipe in zip(upperPipes, lowerPipes):
+            SCREEN.blit(GAME_SPRITES['obstacles'][0], (upperPipe['x'], upperPipe['y']))
+            SCREEN.blit(GAME_SPRITES['obstacles'][1], (lowerPipe['x'], lowerPipe['y']))
+
+        SCREEN.blit(GAME_SPRITES['base'], (basex, GROUNDY))
+        SCREEN.blit(GAME_SPRITES['player'], (playerx, playery))
+        myDigits = [int(x) for x in list(str(score))]
+        width = 0
+        for digit in myDigits:
+            width += GAME_SPRITES['numbers'][digit].get_width()
+        Xoffset = (SCREENWIDTH - width)/2
+
+        for digit in myDigits:
+            SCREEN.blit(GAME_SPRITES['numbers'][digit], (Xoffset, SCREENHEIGHT*0.12))
+            Xoffset += GAME_SPRITES['numbers'][digit].get_width()
+        pygame.display.update()
+        FPSCLOCK.tick(FPS)
+
+def isCollide(playerx, playery, upperPipes, lowerPipes):
+    if playery> GROUNDY - 25  or playery<0:
+        GAME_SOUNDS['hit'].play()
+        return True
+    
+    for pipe in upperPipes:
+        pipeHeight = GAME_SPRITES['obstacles'][0].get_height()
+        if(playery < pipeHeight + pipe['y'] and abs(playerx - pipe['x']) < GAME_SPRITES['obstacles'][0].get_width()):
+            GAME_SOUNDS['hit'].play()
+            return True
+
+    for pipe in lowerPipes:
+        if (playery + GAME_SPRITES['player'].get_height() > pipe['y']) and abs(playerx - pipe['x']) < GAME_SPRITES['obstacles'][0].get_width():
+            GAME_SOUNDS['hit'].play()
+            return True
+
+    return False
+
+def getRandomPipe():
+    """
+    Generate positions of two pipes(one bottom straight and one top rotated ) for blitting on the screen
+    """
+    pipeHeight = GAME_SPRITES['obstacles'][0].get_height()
+    offset = SCREENHEIGHT/3
+    y2 = offset + random.randrange(0, int(SCREENHEIGHT - GAME_SPRITES['base'].get_height()  - 1.2 *offset))
+    pipeX = SCREENWIDTH + 10
+    y1 = pipeHeight - y2 + offset
+    pipe = [
+        {'x': pipeX, 'y': -y1}, #upper Pipe
+        {'x': pipeX, 'y': y2} #lower Pipe
+    ]
+    return pipe
 
 
 
 
 
 
-
-# driver code from where the game will start
 if __name__ == "__main__":
-
-    pygame.init()   # initialising all pygame modules
-    FPS_CLOCK = pygame.time.Clock()
-    pygame.display.set_caption("ICY FLAPPY")
-    GAME_SPRITES['numbers'] = (
-        pygame.image.load('Sprites\\0.png').convert_alpha(),
-        pygame.image.load('Sprites\\1.png').convert_alpha(),
-        pygame.image.load('Sprites\\2.png').convert_alpha(),
-        pygame.image.load('Sprites\\3.png').convert_alpha(),
-        pygame.image.load('Sprites\\4.png').convert_alpha(),
-        pygame.image.load('Sprites\\5.png').convert_alpha(),
-        pygame.image.load('Sprites\\6.png').convert_alpha(),
-        pygame.image.load('Sprites\\7.png').convert_alpha(),
-        pygame.image.load('Sprites\\8.png').convert_alpha(),
-        pygame.image.load('Sprites\\9.png').convert_alpha()
-
+    # This will be the main point from where our game will start
+    pygame.init() # Initialize all pygame's modules
+    FPSCLOCK = pygame.time.Clock()
+    pygame.display.set_caption('ICY FLAPPY')
+    GAME_SPRITES['numbers'] = ( 
+        pygame.image.load('Sprites/0.png').convert_alpha(),
+        pygame.image.load('Sprites/1.png').convert_alpha(),
+        pygame.image.load('Sprites/2.png').convert_alpha(),
+        pygame.image.load('Sprites/3.png').convert_alpha(),
+        pygame.image.load('Sprites/4.png').convert_alpha(),
+        pygame.image.load('Sprites/5.png').convert_alpha(),
+        pygame.image.load('Sprites/6.png').convert_alpha(),
+        pygame.image.load('Sprites/7.png').convert_alpha(),
+        pygame.image.load('Sprites/8.png').convert_alpha(),
+        pygame.image.load('Sprites/9.png').convert_alpha(),
     )
 
-    GAME_SPRITES['message'] = pygame.image.load('Sprites/message.png').convert_alpha()
-    GAME_SPRITES['base'] = pygame.image.load('Sprites/base.png').convert_alpha()
-    GAME_SPRITES['obstacles'] = (
-        pygame.image.load(OBSTACLES).convert_alpha(),
-        pygame.transform.rotate(pygame.image.load(OBSTACLES).convert_alpha() , 180)
+    GAME_SPRITES['message'] =pygame.image.load('Sprites/message.png').convert_alpha()
+    GAME_SPRITES['base'] =pygame.image.load('Sprites/base.png').convert_alpha()
+    GAME_SPRITES['obstacles'] =(pygame.transform.rotate(pygame.image.load(PIPE).convert_alpha(), 180), 
+    pygame.image.load(PIPE).convert_alpha()
     )
 
-    # Game Sounds 
-
+    # Game sounds
     GAME_SOUNDS['die'] = pygame.mixer.Sound('audio/die.wav')
     GAME_SOUNDS['hit'] = pygame.mixer.Sound('audio/hit.wav')
     GAME_SOUNDS['point'] = pygame.mixer.Sound('audio/point.wav')
     GAME_SOUNDS['swoosh'] = pygame.mixer.Sound('audio/swoosh.wav')
     GAME_SOUNDS['wing'] = pygame.mixer.Sound('audio/wing.wav')
 
-    # background , Player Sprites
-
-    GAME_SPRITES['background'] = pygame.image.load(BACKGROUND).convert_alpha()
+    GAME_SPRITES['background'] = pygame.image.load(BACKGROUND).convert()
     GAME_SPRITES['player'] = pygame.image.load(PLAYER).convert_alpha()
 
-    # game Loop
-
     while True:
-
-        welcome_screen()   # Shows the welcome screen until user click the play OR tap 
-        main_game()        # this is the main Game Function
-
-
-
-
-
-
+        welcomeScreen() # Shows welcome screen to the user until he presses a button
+        mainGame() # This is the main game function 
